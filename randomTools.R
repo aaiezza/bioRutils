@@ -72,38 +72,42 @@ write.Table <- function(
 
 ## Logger
 # Uses xtermstyle
+suppressMessages( require( xtermStyle ) )
 
 # Logger color constants
-logger.colors <- list(
-    NORMAL       = list( bg = '',          fg = ''     ),
-    STAGE        = list( bg = 'dark grey', fg = ''     ),
-    GENE         = list( bg = '',          fg = 'blue' ),
-    FILE_PATH    = list( bg = '',          fg = 208    ),
-    CONDITION    = list( bg = '',          fg = 2      ),
-    IGNORED_COND = list( bg = '',          fg = 1      )
+logger.format <- list(
+    NORMAL       = list( bg = '',          fg = '',      formattedPrepend = '',     formattedAppend = '',    prepend = '', append = '\n' ),
+    STAGE        = list( bg = 'dark grey', fg = '',      formattedPrepend = '## ',  formattedAppend = ' ',   prepend = '', append = '\n' ),
+    NOTIFY       = list( bg = 'dark blue', fg = 'white', formattedPrepend = '    ', formattedAppend = ' ',   prepend = '', append = '\n' ),
+    GENE         = list( bg = '',          fg = 'blue',  formattedPrepend = '',     formattedAppend = '',    prepend = '', append = ''   ),
+    FILE_PATH    = list( bg = '',          fg = 208,     formattedPrepend = ' ',    formattedAppend = '',    prepend = '', append = ''   ),
+    CONDITION    = list( bg = '',          fg = 2,       formattedPrepend = '',     formattedAppend = '',    prepend = '', append = ''   ),
+    IGNORED_COND = list( bg = '',          fg = 1,       formattedPrepend = '',     formattedAppend = '',    prepend = '', append = ''   ),
+    ERROR        = list( bg =  1,          fg = 'white', formattedPrepend = ' ==',  formattedAppend = '== ', prepend = '', append = ''   )
 )
 
-logger.getColors <- function() return( names( logger.colors ) )
+logger.levels <- setNames( as.list( names( logger.format ) ), names( logger.format ) )
 
-logger <- function( ..., level = NORMAL, fg, bg )
+logger <- function( ..., level = logger.levels$NORMAL, print = TRUE, fg, bg, prepend, append, formattedPrepend, formattedAppend )
 {
-    message <- ...
+    fgl               <- ifelse ( missing( fg               ), logger.format[[level]]$fg, fg )
+    bgl               <- ifelse ( missing( bg               ), logger.format[[level]]$bg, bg )
+    prependl          <- ifelse ( missing( prepend          ), logger.format[[level]]$prepend,          prepend          )
+    appendl           <- ifelse ( missing( append           ), logger.format[[level]]$append,           append           )
+    formattedPrependl <- ifelse ( missing( formattedPrepend ), logger.format[[level]]$formattedPrepend, formattedPrepend )
+    formattedAppendl  <- ifelse ( missing( formattedAppend  ), logger.format[[level]]$formattedAppend,  formattedAppend  )
 
-    if ( missing( fg ) )
-        fgl = logger.colors[[level]]$fg
-    else fgl = fg
+    message <- paste( ... )
 
-    if ( missing( bg ) )
-        bgl = logger.colors[[level]]$bg
-    else bgl = bg
+    if ( level == logger.levels$FILE_PATH )
+        message <- normalizePath( message )
 
-    if ( level == 'STAGE' )
-        message <- paste( message, ' ' )
+    message <- xtermStyle::style( formattedPrependl, message, formattedAppendl,
+            fg = fgl, bg = bgl, sep = '' )
 
-    if ( !missing(  ) )
+    output <- paste( prependl, message, appendl, sep = '' )
 
-    cat( xtermStyle::style( message, fg = fgl, bg = bgl ) )
-
-    if ( level == 'STAGE' )
-        cat( '\n' )
+    if ( print )
+        cat( output )
+    else return( output )
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/Rscript
 
-suppressMessages( library( xtermStyle ) )
+suppressMessages( source( '/cvri/Rutils/randomTools.R' ) )
 
 # # # #
 # # Gene set retreival, Filtering and Selection # #
@@ -57,12 +57,10 @@ narrowDownGenes <- function(
     # Show percentage of genes that were significantly differentially expressed
     if ( print )
     {
-        write( paste( '      ', geneSetName, '\n    [',
-            xtermStyle::style( sprintf( "%7d", nrow( sigGenes ) ), fg = 'blue' ), '/',
-            xtermStyle::style( sprintf( "%7d", nrow( genes ) ), fg = 'blue' ),
-            sprintf( '] %.2f%% of genes were preserved', ( nrow( sigGenes ) / nrow( genes ) ) * 100 ),
-            sep = ''
-        ), stdout() )
+        logger( prepend = paste( '     ', geneSetName, '\n    [' ),
+            logger( sprintf( "%7d", nrow( sigGenes ) ), level = logger.levels$GENE, print = FALSE ), '/',
+            logger( sprintf( "%7d", nrow(   genes  ) ), level = logger.levels$GENE, print = FALSE ),
+            append = sprintf( '] %.2f%% of genes were preserved\n', ( nrow( sigGenes ) / nrow( genes ) ) * 100 ) )
     }
 
     return( sigGenes[order(sigGenes$p_value),] )

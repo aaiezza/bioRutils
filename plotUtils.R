@@ -3,12 +3,13 @@
 suppressMessages( library( calibrate ) )
 suppressMessages( library( ggplot2 ) )
 suppressMessages( library( ggrepel ) )
-suppressMessages( library( xtermStyle ) )
 suppressMessages( require( htmlwidgets ) )
 suppressMessages( require( gridExtra ) )
 
 Sys.setenv("plotly_username" = "aaiezza")
 Sys.setenv("plotly_api_key" = "7igknczkw2")
+
+suppressMessages( source( '/cvri/Rutils/randomTools.R' ) )
 
 # # # #
 # # Shortcut for not needing to think to hard on a plot file name
@@ -18,9 +19,8 @@ startPlot <- function(
     dir, width = 15, height = 15, pointsize = 16,
     landscape = FALSE, onefile = TRUE, ... )
 {
-    cat( xtermStyle::style( '## Creating volcano plot file \n', bg = 'dark grey' ),
-            xtermStyle::style( normalizePath( outputFile ), fg = 208 ),
-            '\n' )
+    logger( 'Creating volcano plot file', level = logger.levels$STAGE )
+    logger( outputFile, level = logger.levels$FILE_PATH, append = '\n' )
 
     if ( !missing( dir ) )
         outputFile <- paste( dir, '/', outputFile )
@@ -41,9 +41,13 @@ produceVolcanoPlot <- function(
     print = FALSE,
     toWidget = FALSE, volcanoWidgetDir = 'interactiveVolcanoPlots', ...
 )
-
 {
-    cat( '  ~', xtermStyle::style( sprintf( '%30s', title ), fg = 'green' ) )
+    conds <- strsplit( title, ' vs ' )[[1]]
+    if ( length( conds ) == 2 )
+        logger( prepend = '  ~',
+            sprintf( '%20s vs %-20s', conds[1], conds[2] ),
+            append = '', fg = 'green' )
+    else logger( prepend = '  ~', sprintf( '%30s', title ), append = '', fg = 'green' )
 
     data$class <- with( data,
         ifelse( abs( `log2(fold_change)` ) < log2FoldChangeCutoff & p_value > alpha,
