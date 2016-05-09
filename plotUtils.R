@@ -1,0 +1,143 @@
+#!/usr/bin/Rscript
+
+suppressMessages( library( calibrate ) )
+suppressMessages( library( ggplot2 ) )
+suppressMessages( library( ggrepel ) )
+suppressMessages( library( xtermStyle ) )
+suppressMessages( require( htmlwidgets ) )
+suppressMessages( require( gridExtra ) )
+
+Sys.setenv("plotly_username" = "aaiezza")
+Sys.setenv("plotly_api_key" = "7igknczkw2")
+
+# # # #
+# # Shortcut for not needing to think to hard on a plot file name
+
+startPlot <- function(
+    outputFile = format( Sys.time(), "%Y-%m-%d_%H%M%S_outputPlot.pdf" ),
+    dir, width = 15, height = 15, pointsize = 16,
+    landscape = FALSE, onefile = TRUE, ... )
+{
+    cat( xtermStyle::style( '## Creating volcano plot file \n', bg = 'dark grey' ),
+            xtermStyle::style( normalizePath( outputFile ), fg = 208 ),
+            '\n' )
+
+    if ( !missing( dir ) )
+        outputFile <- paste( dir, '/', outputFile )
+    pdf( file = outputFile, width = ifelse(landscape, height, width),
+        height = ifelse(landscape, height, width), pointsize = pointsize,
+        onefile = onefile )
+}
+
+# For multiple plots on the same page:
+#  par( mfrow = c(2,3) )
+
+produceVolcanoPlot <- function(
+    data, title = "Plot", alpha = 5e-2, log2FoldChangeCutoff = 2.0,
+    geneList = c(), namingPValueCutoff = alpha, namingLog2FoldChangeCutoff = log2FoldChangeCutoff,
+    namingLog2FoldChangeCutoffDown = -namingLog2FoldChangeCutoff,
+    namingLog2FoldChangeCutoffUp = namingLog2FoldChangeCutoff,
+    alphaFill = 0.9, nudge = 0.2, showLegend = TRUE, scaleOverMedian, plotStuff,
+    print = FALSE,
+    toWidget = FALSE, volcanoWidgetDir = 'interactiveVolcanoPlots', ...
+)
+
+{
+    cat( '  ~', xtermStyle::style( sprintf( '%30s', title ), fg = 'green' ) )
+
+    data$class <- with( data,
+        ifelse( abs( `log2(fold_change)` ) < log2FoldChangeCutoff & p_value > alpha,
+            'Not Significant',
+        ifelse( abs( `log2(fold_change)` ) > log2FoldChangeCutoff & p_value > alpha,
+            paste('Not Significant\n  Considerable Log2FoldChange >', log2FoldChangeCutoff),
+        ifelse( abs( `log2(fold_change)` ) < log2FoldChangeCutoff & p_value <= alpha,
+            paste('Significant <', alpha, '\n  Inadequate Log2FoldChange'),
+        ifelse( abs( `log2(fold_change)` ) > log2FoldChangeCutoff & p_value <= alpha &
+            significant == 'no',
+            'Significant, but unreliable replicate data',
+        'Significant') ) ) )
+    )
+
+    GENE_NAMES = paste( '^(', paste( geneList, collapse = '|' ), ')$', sep = '' )
+
+    labels <- subset( data, grepl( GENE_NAMES, gene ) |
+        ( -log10( p_value ) > -log10( namingPValueCutoff ) &
+        ( `log2(fold_change)` > namingLog2FoldChangeCutoffUp |
+          `log2(fold_change)` < namingLog2FoldChangeCutoffDown )
+        & class == 'Significant' ) )
+
+    if ( !missing(scaleOverMedian) )
+        scale <- round( abs( median(data$`log2(fold_change)`) ) + scaleOverMedian, 1 )
+        if ( is.na( scale ) ) scale = 1
+
+    plot <- ggplot( data, aes( x = `log2(fold_change)`, y = -log10( p_value ), gene = gene ) ) +
+      ####
+        geom_point( aes( fill = class ), show.legend = showLegend,
+            color = 'black', shape = 21, size = 5, stroke = 1.3 ) +
+      ####
+        scale_fill_manual( name = NULL,
+            breaks = c(
+                   'Significant',
+                   'Significant, but unreliable replicate data',
+            paste( 'Significant <', alpha, '\n  Inadequate Log2FoldChange'),
+            paste( 'Not Significant\n  Considerable Log2FoldChange >', log2FoldChangeCutoff),
+                   'Not Significant' ),
+            values = c(
+            alpha( 'darkgrey', alphaFill ),
+            alpha( 'orange'  , alphaFill ),
+            alpha( 'green'   , alphaFill ),
+            alpha( 'red'     , alphaFill ),
+            alpha( 'yellow'  , alphaFill ) ) ) +
+      ####
+        theme_bw( base_size = 26 ) +
+      ####
+        ggtitle( title ) +
+      ####
+        theme(
+            legend.key.height = unit( 2, 'lines' ),
+            legend.position = 'bottom',
+            legend.direction = 'horizontal',
+            plot.margin = unit(c(2,2,2,2), 'lines'),
+            plot.title = element_text( size=24, vjust=0.5, margin=margin(10,0,12,0) ),
+            axis.title = element_text( vjust=0.5, margin=margin(50,50,50,50) ) ) +
+      ####
+        guides( fill = guide_legend( ncol = 2, byrow = TRUE ) )
+
+
+    if ( !missing( plotStuff ) ) plot <- plot + plotStuff
+    if ( !missing( scaleOverMedian ) ) plot <- plot + xlim( -scale, scale )
+    if ( nrow(labels) > 0 )
+    {
+        plot <- plot + geom_label_repel(
+                data = labels,
+                aes( label = gene, fill = class ),
+                fontface = 'italic', color = 'black',
+                show.legend = FALSE,
+                size = 6, force = 2,
+                label.size = 1.15,
+                segment.size = 0.8,
+                arrow = arrow(25, unit(0.01,'npc')),
+                box.padding = unit( 0.02, 'npc' ),
+                point.padding = unit( 0.6, 'lines' ),
+                nudge_x = nudge
+            )
+    }
+
+    if ( print ) print( plot )
+
+    if ( toWidget )
+    {
+        cat( ' ~ widget' )
+        dir.create( file.path( volcanoWidgetDir ) )
+        fileName <- paste( gsub(' ', '_', title), '.html', sep='' )
+
+        widget <- as.widget( ggplotly( plot, tooltip = c( 'gene', 'x', 'y' ) ) )
+
+        htmlwidgets::saveWidget( widget, fileName )
+        file.rename( fileName, file.path( volcanoWidgetDir, fileName ) )
+    }
+
+    cat( '\n' )
+
+    return( plot )
+}
