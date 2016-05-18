@@ -23,7 +23,11 @@ startPlot <- function(
     logger( outputFile, level = logger.levels$FILE_PATH, append = '\n' )
 
     if ( !missing( dir ) )
+    {
+        if ( !dir.exists( dir ) )
+            dir.create( dir )
         outputFile <- paste( dir, '/', outputFile )
+    }
     pdf( file = outputFile, width = ifelse(landscape, height, width),
         height = ifelse(landscape, height, width), pointsize = pointsize,
         onefile = onefile )
@@ -58,8 +62,8 @@ produceVolcanoPlot <- function(
             paste('Significant <', alpha, '\n  Inadequate Log2FoldChange'),
         ifelse( abs( `log2(fold_change)` ) > log2FoldChangeCutoff & p_value <= alpha &
             significant == 'no',
-            'Significant, but unreliable replicate data',
-        'Significant') ) ) )
+            'Significant p-value',
+        'Significant q-value') ) ) )
     )
 
     GENE_NAMES = paste( '^(', paste( geneList, collapse = '|' ), ')$', sep = '' )
@@ -81,17 +85,17 @@ produceVolcanoPlot <- function(
       ####
         scale_fill_manual( name = NULL,
             breaks = c(
-                   'Significant',
-                   'Significant, but unreliable replicate data',
+                   'Significant q-value',
+                   'Significant p-value',
             paste( 'Significant <', alpha, '\n  Inadequate Log2FoldChange'),
             paste( 'Not Significant\n  Considerable Log2FoldChange >', log2FoldChangeCutoff),
                    'Not Significant' ),
             values = c(
             alpha( 'darkgrey', alphaFill ),
             alpha( 'orange'  , alphaFill ),
-            alpha( 'green'   , alphaFill ),
             alpha( 'red'     , alphaFill ),
-            alpha( 'yellow'  , alphaFill ) ) ) +
+            alpha( 'yellow'  , alphaFill ),
+            alpha( 'green'   , alphaFill ) ) ) +
       ####
         theme_bw( base_size = 26 ) +
       ####
