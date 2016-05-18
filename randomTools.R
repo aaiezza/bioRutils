@@ -3,6 +3,12 @@
 # # # #
 # # Just some random R functions that are helpful # #
 
+# Override defaults of functions
+gsub <- function( pattern, replacement, x, ignore.case = FALSE, perl = TRUE, fixed = FALSE, useBytes = FALSE )
+{
+    return( gsub(pattern, replacement, x, ignore.case = ignore.case, perl = perl, fixed = fixed, useBytes = useBytes) );
+}
+
 # Generate random nucleotide sequence
 randNucleotides <- function(
     n, nucleotides = c('A', 'C', 'G', 'T'),
@@ -83,29 +89,28 @@ logger.format <- list(
     FILE_PATH    = list( bg = '',          fg = 208,     formattedPrepend = ' ',    formattedAppend = '',    prepend = '', append = ''   ),
     CONDITION    = list( bg = '',          fg = 2,       formattedPrepend = '',     formattedAppend = '',    prepend = '', append = ''   ),
     IGNORED_COND = list( bg = '',          fg = 1,       formattedPrepend = '',     formattedAppend = '',    prepend = '', append = ''   ),
-    ERROR        = list( bg =  1,          fg = 'white', formattedPrepend = ' ==',  formattedAppend = '== ', prepend = '', append = ''   )
+    ERROR        = list( bg =  1,          fg = 'white', formattedPrepend = ' ==',  formattedAppend = '== ', prepend = '', append = '\n' )
 )
 
 logger.levels <- setNames( as.list( names( logger.format ) ), names( logger.format ) )
 
-logger <- function( ..., level = logger.levels$NORMAL, print = TRUE, fg, bg, prepend, append, formattedPrepend, formattedAppend )
+logger <- function( ..., level = logger.levels$NORMAL, print = TRUE,
+    fg               = logger.format[[level]]$fg,
+    bg               = logger.format[[level]]$bg,
+    prepend          = logger.format[[level]]$prepend,
+    append           = logger.format[[level]]$append,
+    formattedPrepend = logger.format[[level]]$formattedPrepend,
+    formattedAppend  = logger.format[[level]]$formattedAppend )
 {
-    fgl               <- ifelse ( missing( fg               ), logger.format[[level]]$fg, fg )
-    bgl               <- ifelse ( missing( bg               ), logger.format[[level]]$bg, bg )
-    prependl          <- ifelse ( missing( prepend          ), logger.format[[level]]$prepend,          prepend          )
-    appendl           <- ifelse ( missing( append           ), logger.format[[level]]$append,           append           )
-    formattedPrependl <- ifelse ( missing( formattedPrepend ), logger.format[[level]]$formattedPrepend, formattedPrepend )
-    formattedAppendl  <- ifelse ( missing( formattedAppend  ), logger.format[[level]]$formattedAppend,  formattedAppend  )
-
     message <- paste( ... )
 
     if ( level == logger.levels$FILE_PATH )
         message <- normalizePath( message )
 
-    message <- xtermStyle::style( formattedPrependl, message, formattedAppendl,
-            fg = fgl, bg = bgl, sep = '' )
+    message <- xtermStyle::style( formattedPrepend, message, formattedAppend,
+            fg = fg, bg = bg, sep = '' )
 
-    output <- paste( prependl, message, appendl, sep = '' )
+    output <- paste( prepend, message, append, sep = '' )
 
     if ( print )
         cat( output )

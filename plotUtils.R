@@ -16,7 +16,7 @@ suppressMessages( source( '/cvri/Rutils/randomTools.R' ) )
 
 startPlot <- function(
     outputFile = format( Sys.time(), "%Y-%m-%d_%H%M%S_outputPlot.pdf" ),
-    dir, width = 15, height = 15, pointsize = 16,
+    dir = '.', width = 15, height = 15, pointsize = 16,
     landscape = FALSE, onefile = TRUE, ... )
 {
     logger( 'Creating volcano plot file', level = logger.levels$STAGE )
