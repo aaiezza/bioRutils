@@ -8,7 +8,6 @@ HEATMAPS_DIR <- 'heatmaps'
 VOLCANO_WIDGET_DIR <- 'interactiveVolcanoPlots'
 
 ## Package Dependencies
-suppressMessages( library( xtermStyle ) )
 suppressMessages( library( xlsx ) )
 suppressMessages( library( plotly ) )
 suppressMessages( library( plyr ) )
@@ -27,8 +26,8 @@ options( width = 120, warn = -1 )
 #
 importGD <- function( file = FRM_GENE_FILE, ... )
 {
-    # logger( ' Working in', getwd(), '\n## Importing Gene Data',  )
-    cat( xtermStyle::style( ' Working in', getwd(), '\n## Importing Gene Data ', bg = 'dark grey' ), '\n' )
+    logger( 'Working in', getwd(), level = logger.levels$NOTIFY )
+    logger( 'Importing Gene Data', level = logger.levels$STAGE  )
 
     # Import all of the data
     geneData <<- fread( file, header = TRUE, sep = '\t',
@@ -37,8 +36,7 @@ importGD <- function( file = FRM_GENE_FILE, ... )
     geneData <<- narrowDownGenes(
         geneData,
         geneFilter = GENE_ID_FILTER,
-        geneSetName = paste( 'Gene Set loaded from:',
-            xtermStyle::style( normalizePath( file ), fg = 208 ) ), ... )
+        geneSetName = logger( prepend = 'Gene Set loaded from:', file, level = logger.levels$FILE_PATH, print = FALSE ), ... )
 
     print( summary(geneData[,c('value_1', 'value_2','log2(fold_change)','p_value')]) )
 }
@@ -68,12 +66,13 @@ dataPeek <- function( geneData, len = 100, cap = len, log = '',
       beside = TRUE, col = c( S1Col, S2Col ), log = log,
       legend = c( as.vector(geneData$sample_1)[1], as.vector(geneData$sample_2)[1]  ) )
 
-    cat( xtermStyle::style( '## Peek at data ', bg = 'dark grey' ), '\n ',
-        xtermStyle::style( normalizePath( filename ), fg = 208 ), '\n', sep='' )
-    cat( ' ', xtermStyle::style( sprintf( '%12s', geneData$sample_1[1] ), fg = 2 ), ':',
-        paste( head( S2y ), collapse = ', ' ), '\n' )
-    cat( ' ', xtermStyle::style( sprintf( '%12s', geneData$sample_2[1] ), fg = 2 ), ':',
-        paste( head( S1y ), collapse = ', ' ), '\n' )
+
+    logger( 'Peek at data', level = logger.levels$STAGE )
+    logger( filename, append = '\n', level = logger.levels$FILE_PATH )
+    logger( prepend = ' ', sprintf( '%12s', geneData$sample_1[1] ), level = logger.levels$CONDITION )
+    logger( ':', paste( head( S1y ), collapse = ', ' ), level = logger.levels$NORMAL )
+    logger( prepend = ' ', sprintf( '%12s', geneData$sample_2[1] ), level = logger.levels$CONDITION )
+    logger( ':', paste( head( S2y ), collapse = ', ' ), level = logger.levels$NORMAL )
 
     if( file )
         suppressMessages( graphics.off() )
@@ -101,7 +100,7 @@ allfpkmZscores <- function( geneSet )
         return ( fpkmRow )
     }
 
-    cat( xtermStyle::style( ' # Normalize FPKMs ', bg = 'dark grey' ), '\n' )
+    logger( 'Normalize FPKMs', level = logger.levels$STAGE )
 
     fpkms <- matrix( unlist( geneSet[,2:ncol(geneSet)] ), ncol = ncol(geneSet)-1 )
     geneSet$fpkmZ <- t( apply( fpkms, 1, getFPKM ) )
@@ -121,9 +120,9 @@ makeHeatmap <- function( geneSet, file = 'GOI_expression_heatmap.png',
     if ( ncol( conditionsSet ) <= 1 || nrow( geneSet ) <= 1 )
         return()
 
-    cat( xtermStyle::style( '## Creating Heatmap ', bg = 'dark grey' ), ' ',
-        xtermStyle::style( nrow(geneSet), fg = 'blue' ), ' Genes being Mapped\n ',
-        xtermStyle::style( normalizePath( file ), fg = 208 ), '\n', sep='' )
+    logger( 'Creating Heatmap', level = logger.levels$STAGE, append = ' ' )
+    logger( nrow(geneSet), level = logger.levels$GENE, append = ' Genes being Mapped\n' )
+    logger( file, level = logger.levels$FILE_PATH, append = '\n' )
 
     dir.create( file.path( heatmapDirectory ) )
     png( file = paste( heatmapDirectory, file, sep = '/'), width = width, height = height )
@@ -146,16 +145,17 @@ makeHeatmap <- function( geneSet, file = 'GOI_expression_heatmap.png',
 writeGOI <- function( geneData, dir = 'goi', fileBody = 'GOI' )
 {
     file <- ffn( dir=dir, outputFile = fileBody, ext='.tsv' )
-    cat( xtermStyle::style( '## Write GOI to file ', bg = 'dark grey' ), ' ',
-        xtermStyle::style( nrow(geneData), fg = 'blue' ), ' Genes being printed\n ',
-        xtermStyle::style( normalizePath( file ), fg = 208 ), '\n', sep='' )
+
+    logger( 'Write GOI to file', level = logger.levels$STAGE, append = ' ' )
+    logger( nrow(geneData), level = logger.levels$GENE, append = ' Genes being printed\n' )
+    logger( file, level = logger.levels$FILE_PATH, append = '\n' )
 
     write.Table( unique( geneData$gene ), file = file )
 }
 
 massive <- function( geneData, cases = 2 )
 {
-    cat( xtermStyle::style( '## Aggregate data to Gene Set ', bg = 'dark grey' ), '\n' )
+    logger( 'Aggregrate data to Gene Set', level = logger.levels$STAGE )
 
     # Make massive geneSet
     geneSet <- data.frame()
@@ -189,17 +189,20 @@ massive <- function( geneData, cases = 2 )
     #  We can separate them here:
     geneSet.uniFPKM <- geneSet[complete.cases( geneSet ),]
     geneSet.naFPKM  <- geneSet[!( geneSet$gene %in% geneSet.uniFPKM$gene ),]
-    cat( sprintf( '%50s: %s\n%50s: %s\n%50s: %s\n',
-        paste( 'Genes with expression in at least', cases, 'conditions' ), xtermStyle::style( nrow( geneSet ), fg = 'blue' ),
+
+    logger( sprintf( '%50s: %s\n%50s: %s\n%50s: %s\n',
+        paste( 'Genes with expression in at least', cases, 'conditions' ),
+            logger( nrow( geneSet ), level = logger.levels$GENE, print = FALSE ),
         'Genes with expression across all conditions',
-            xtermStyle::style( nrow( geneSet.uniFPKM ), fg = 'blue' ),
+            logger( nrow( geneSet.uniFPKM ), level = logger.levels$GENE, print = FALSE ),
         'Genes missing expression in at least 1 condition',
-            xtermStyle::style( nrow( geneSet.naFPKM ), fg = 'blue' ) ), '\n' )
+            logger( nrow( geneSet.naFPKM ), level = logger.levels$GENE, print = FALSE ) ), append = '\n' )
 
     if ( cases >= length( conditions ) )
     {
         # TODO
         ## geneSet.naFPKM cannot be calculated in this case
+        logger( 'geneSet.naFPKM cannot be calculated', level = logger.levels$ERROR )
     }
 
     return( list( all = geneSet, naFPKM = geneSet.naFPKM, uniFPKM = geneSet.uniFPKM ) )
@@ -209,43 +212,17 @@ massive <- function( geneData, cases = 2 )
 # Extract SDE Genes and place them in sets
 #
 getSDEGeneSet <- function( gene_set = geneSet$all,
-    alpha = 5e-15, altAlpha = 5e-2,
+    alpha = 5e-2, altAlpha = 5e-2,
     l2fccU = 1.0, l2fccD = -1.0, ... )
 {
-    cat( xtermStyle::style( '## Identify significant genes ', bg = 'dark grey' ), '\n' )
-    # enriched <<- geneSet[geneSet$gene_id %in% narrowDownGenes(
-    #     geneData[geneData$gene_id %in% geneSet$gene_id,],
-    #     significant = 'yes', status = 'OK',
-    #     alpha = 5e-3, log2FoldChangeCutoff = l2fccU, exprRegulation = 'UP',
-    #     geneSetName = 'Enriched Genes' )$gene_id,]
-    # depleted <<- geneSet[geneSet$gene_id %in% narrowDownGenes(
-    #     geneData[geneData$gene_id %in% geneSet$gene_id,],
-    #     significant = 'yes', status = 'OK',
-    #     alpha = 5e-3, log2FoldChangeCutoff = l2fccD, exprRegulation = 'DOWN',
-    #     geneSetName = 'Depleted Genes' )$gene_id,]
-
-    # sdeGenes <- geneSet.naFPKM[geneSet.naFPKM$gene_id %in% narrowDownGenes(
-    #   geneData[geneData$gene_id %in% geneSet.naFPKM$gene_id,],
-    #   alpha = 0.0005, l2fccU = l2fccU, l2fccD = l2fccD,
-    #   significant = 'yes', status = 'OK' )$gene_id,]
-
-    # geneSet[geneSet$gene_id %in% narrowDownGenes(
-    #     geneData[geneData$gene_id %in% geneSet$gene_id,],
-    #     alpha = 5e-15, l2fccU = l2fccU, l2fccD = l2fccD,
-    #     significant = 'yes', status = 'OK' )$gene_id,]
-
-    # sdeGenes <- geneSet.uniFPKM[geneSet.uniFPKM$gene_id %in% narrowDownGenes(
-    #   geneData[geneData$gene_id %in% geneSet.uniFPKM$gene_id,],
-    #   alpha = 0.05, l2fccU = l2fccU, l2fccD = l2fccD,
-    #   significant = 'yes' )$gene_id,]
-
+    logger( 'Identify significant genes ', level = logger.levels$STAGE )
 
     sdeGenes.data <<- narrowDownGenes(
         geneData[geneData$gene %in% gene_set$gene,],
         alpha = alpha, l2fccU = l2fccU, l2fccD = l2fccD,
         significant = 'yes', geneSetName = 'SDE Gene Set' )
     sdeGenes <<- gene_set[gene_set$gene %in% sdeGenes.data$gene,]
-    cat( '  ', xtermStyle::style( nrow(sdeGenes), fg = 'blue' ), ' genes present across conditions\n' )
+    logger( '  ', nrow(sdeGenes), append = ' genes present across conditions\n', level = logger.levels$GENE )
 
     enriched.data <<- narrowDownGenes(
         geneData[geneData$gene %in% gene_set$gene,],
@@ -255,7 +232,7 @@ getSDEGeneSet <- function( gene_set = geneSet$all,
     enriched.data <<- enriched.data[enriched.data$sample_1 %in% conditions,]
     enriched.data <<- enriched.data[enriched.data$sample_2 %in% conditions,]
     enriched <<- gene_set[gene_set$gene %in% enriched.data$gene,]
-    cat( '  ', xtermStyle::style( nrow(enriched), fg = 'blue' ), ' genes present across conditions\n' )
+    logger( '  ', nrow(enriched), append = ' genes present across conditions\n', level = logger.levels$GENE )
 
     depleted.data <<- narrowDownGenes(
         geneData[geneData$gene %in% gene_set$gene,],
@@ -265,7 +242,7 @@ getSDEGeneSet <- function( gene_set = geneSet$all,
     depleted.data <<- depleted.data[depleted.data$sample_1 %in% conditions,]
     depleted.data <<- depleted.data[depleted.data$sample_2 %in% conditions,]
     depleted <<- gene_set[gene_set$gene %in% depleted.data$gene,]
-    cat( '  ', xtermStyle::style( nrow(depleted), fg = 'blue' ), ' genes present across conditions\n' )
+    logger( '  ', nrow(depleted), append = ' genes present across conditions\n', level = logger.levels$GENE )
 }
 
 ##
@@ -280,14 +257,14 @@ parseCondtions <- function( ignoreConditions = c() )
     conditions <<- allConditions[grep( igCond, allConditions, invert = TRUE )]
     conditionsSet <<- t( combn( conditions, 2 ) )
 
-    cat( xtermStyle::style( '## Identifying comparisons \n  ', bg = 'dark grey' ) )
+    logger( 'Identifying comparisons', level = logger.levels$STAGE )
     for ( c in 1:length(conditions) )
-        cat( ifelse( c == 1, '', ',' ), xtermStyle::style( conditions[c], fg = 2 ) )
+        cat( ifelse( c == 1, '', ',' ), logger( conditions[c], level = logger.levels$CONDITION, print = FALSE ) )
 
     if ( length(allConditions[grep( igCond, allConditions )]) > 0 )
-        cat( ' ~ ignoring', xtermStyle::style( paste(
-            allConditions[grep( igCond, allConditions )],
-            collapse = ', '), fg = 1 ) )
+        logger( prepend = ' ~ ignoring',
+            paste( allConditions[grep( igCond, allConditions )], collapse = ', '),
+            level = logger.levels$IGNORE_COND )
 
     cat( '\n' )
 }
@@ -321,7 +298,7 @@ volcanos <- function( toPdf = FALSE, myOwnPdf = FALSE,
 
     if ( toPdf )
         startPlot( outputFile = 'volcanoPlot.pdf', ... )
-    else cat( xtermStyle::style( '## Volcano plot comparisons \n', bg = 'dark grey' ) )
+    else logger( 'Volcano plot comparisons', level = logger.levels$STAGE )
 
     for( i in 1:nrow(condSet) )
     {
@@ -394,7 +371,7 @@ analyzeEnrichment <- function(
                     'eaDEPLET/kegg.txt' ),
     n = 5 )
 {
-    cat( xtermStyle::style( '## Analyze HOMER Enrichment Analysis Output ', bg = 'dark grey' ), '\n' )
+    logger( 'Analyze HOMER Enrichment Analysis Output ', level = logger.levels$STAGE )
 
     ea <<- list()
     for ( i in 1:length(analysis) )
@@ -414,7 +391,7 @@ analyzeEnrichment <- function(
         cond <- cond[order(cond$logP),]
         cond <- cond[!duplicated(cond[,2]),]
 
-        cat( ' ===>>> ', xtermStyle::style( readName, fg = 13 ), ' <<<===\n-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --\n' );
+        logger( prepend = ' ===>>> ', readName, fg = 13, append = ' <<<===\n-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --\n' )
         print( cond[1:n,c(2,4,6)] )
         cat( '\n' )
 
