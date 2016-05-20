@@ -140,17 +140,30 @@ makeHeatmap <- function( geneSet, file = 'GOI_expression_heatmap.png',
 }
 
 ##
-# Print Genes of Interest to a .tsv file
+# Print Genes of Interest to a text-separated-values file
 #
-writeGOI <- function( geneData, dir = 'goi', fileBody = 'GOI' )
+writeGOI <- function( geneData, withScore = FALSE, dir = 'goi', fileBody = 'GOI' )
 {
-    file <- ffn( dir=dir, outputFile = fileBody, ext='.tsv' )
+    file <- ffn( dir=dir, outputFile = fileBody, ext='.txt' )
 
     logger( 'Write GOI to file', level = logger.levels$STAGE, append = ' ' )
-    logger( nrow(geneData), level = logger.levels$GENE, append = ' Genes being printed\n' )
+    logger( nrow( geneData ), level = logger.levels$GENE, append = ' Genes being printed\n' )
     logger( file, level = logger.levels$FILE_PATH, append = '\n' )
 
-    write.Table( unique( geneData$gene ), file = file )
+    if ( 'log2(fold_change)' %in% names( geneData ) )
+    {
+        if ( withScore )
+            write.Table( aggregate( geneData[,c( 'gene', 'log2(fold_change)' )],
+                    by = geneData[, 'gene', drop = FALSE], FUN = mean )[,-2],
+                file = file, col.names = FALSE, verbose = FALSE )
+        else
+            write.Table( unique( geneData$gene ), file = file, col.names = FALSE, verbose = FALSE )
+    } else
+    {
+        ## if here, we are assuming that the data given was a matrix of fpkms
+        write( conditions, ncolumns = length( conditions ), file = file )
+        write.Table( geneData[,-length( names( geneData ) )], file = file, append = TRUE, col.names = FALSE, verbose = FALSE )
+    }
 }
 
 massive <- function( geneData, cases = 2 )

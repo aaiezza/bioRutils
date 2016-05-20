@@ -66,9 +66,16 @@ ffn <- function(
 write.Table <- function(
     x, file = "", append = FALSE, quote = FALSE, sep = "\t",
     eol = "\n", na = "NA", dec = ".", row.names = FALSE,
-    col.names = FALSE, qmethod = c("escape", "double"),
-    fileEncoding = "" )
+    col.names = TRUE, qmethod = c("escape", "double"),
+    fileEncoding = "", verbose = TRUE )
 {
+    if ( verbose )
+    {
+        logger( 'Write data to file', level = logger.levels$STAGE, append = ' ' )
+        logger( '[ ', nrow( x ), ', ', ncol( x ), ' ]', level = logger.levels$NORMAL, sep = '' )
+        logger( file, level = logger.levels$FILE_PATH, append = '\n' )
+    }
+
     return( write.table(
         x = x, file = file, append = append, quote = quote, sep = sep,
         eol = eol, na = na, dec = dec, row.names = row.names,
@@ -97,10 +104,12 @@ logger.levels <- setNames( as.list( names( logger.format ) ), names( logger.form
 logger <- function( ..., level = logger.levels$NORMAL, print = TRUE,
     fg               = logger.format[[level]]$fg,
     bg               = logger.format[[level]]$bg,
-    prepend          = logger.format[[level]]$prepend,
-    append           = logger.format[[level]]$append,
-    formattedPrepend = logger.format[[level]]$formattedPrepend,
-    formattedAppend  = logger.format[[level]]$formattedAppend )
+    outside,
+    prepend          = if(!missing(outside)) outside else logger.format[[level]]$prepend,
+    append           = if(!missing(outside)) outside else logger.format[[level]]$append,
+    formatted,
+    formattedPrepend = if(!missing(formatted)) formatted else logger.format[[level]]$formattedPrepend,
+    formattedAppend  = if(!missing(formatted)) formatted else logger.format[[level]]$formattedAppend )
 {
     message <- paste( ... )
 
