@@ -17,16 +17,19 @@ suppressMessages( source( '/cvri/Rutils/randomTools.R' ) )
 startPlot <- function(
     outputFile = format( Sys.time(), "%Y-%m-%d_%H%M%S_outputPlot.pdf" ),
     dir = '.', width = 15, height = 15, pointsize = 16,
-    landscape = FALSE, onefile = TRUE, ... )
+    landscape = FALSE, onefile = TRUE, verbose = TRUE, ... )
 {
-    logger( 'Creating volcano plot file', level = logger.levels$STAGE )
-    logger( outputFile, level = logger.levels$FILE_PATH, append = '\n' )
+    if ( verbose )
+    {
+        logger( 'Creating volcano plot file', level = logger.levels$STAGE )
+        logger( outputFile, level = logger.levels$FILE_PATH, append = '\n' )
+    }
 
     if ( !missing( dir ) )
     {
         if ( !dir.exists( dir ) )
             dir.create( dir )
-        outputFile <- paste( dir, '/', outputFile )
+        outputFile <- paste0( dir, '/', outputFile )
     }
     pdf( file = outputFile, width = ifelse(landscape, height, width),
         height = ifelse(landscape, height, width), pointsize = pointsize,
@@ -37,8 +40,8 @@ startPlot <- function(
 #  par( mfrow = c(2,3) )
 
 produceVolcanoPlot <- function(
-    data, title = "Plot", alpha = 5e-2, log2FoldChangeCutoff = 2.0,
-    geneList = c(), namingPValueCutoff = alpha, namingLog2FoldChangeCutoff = log2FoldChangeCutoff,
+    data, title = "Plot", alpha = 5e-2, log2FoldChangeCutoff = 1.0,
+    geneList = c(), namingQValueCutoff = alpha, namingLog2FoldChangeCutoff = log2FoldChangeCutoff,
     namingLog2FoldChangeCutoffDown = -namingLog2FoldChangeCutoff,
     namingLog2FoldChangeCutoffUp = namingLog2FoldChangeCutoff,
     alphaFill = 0.9, nudge = 0.2, showLegend = TRUE, scaleOverMedian, plotStuff,
@@ -69,16 +72,16 @@ produceVolcanoPlot <- function(
     GENE_NAMES = paste( '^(', paste( geneList, collapse = '|' ), ')$', sep = '' )
 
     labels <- subset( data, grepl( GENE_NAMES, gene ) |
-        ( -log10( p_value ) > -log10( namingPValueCutoff ) &
+        ( -log10( q_value ) > -log10( namingQValueCutoff ) &
         ( `log2(fold_change)` > namingLog2FoldChangeCutoffUp |
           `log2(fold_change)` < namingLog2FoldChangeCutoffDown )
-        & class == 'Significant' ) )
+        & class == 'Significant q-value' ) )
 
     if ( !missing(scaleOverMedian) )
         scale <- round( abs( median(data$`log2(fold_change)`) ) + scaleOverMedian, 1 )
         if ( is.na( scale ) ) scale = 1
 
-    plot <- ggplot( data, aes( x = `log2(fold_change)`, y = -log10( p_value ), gene = gene ) ) +
+    plot <- ggplot( data, aes( x = `log2(fold_change)`, y = -log10( q_value ), gene = gene ) ) +
       ####
         geom_point( aes( fill = class ), show.legend = showLegend,
             color = 'black', shape = 21, size = 5, stroke = 1.3 ) +

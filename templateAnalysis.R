@@ -2,7 +2,7 @@
 
 ## Properties
 FRM_GENE_FILE <- 'frm_gene_exp.diff.txt'
-FAV_COLS <- c( 'gene', 'sample_1', 'sample_2', 'value_1', 'value_2', 'log2(fold_change)', 'p_value' )
+FAV_COLS <- c( 'gene', 'sample_1', 'sample_2', 'value_1', 'value_2', 'log2(fold_change)', 'q_value' )
 GENE_ID_FILTER <- '^((Mir([\\d]|let)+.*)|---|LOC\\d+|(.*Rik.*))$'
 HEATMAPS_DIR <- 'heatmaps'
 VOLCANO_WIDGET_DIR <- 'interactiveVolcanoPlots'
@@ -18,6 +18,7 @@ suppressMessages( library( data.table ) )
 source( '/cvri/Rutils/randomTools.R' )
 source( '/cvri/Rutils/plotUtils.R' )
 source( '/cvri/Rutils/geneSetUtils.R' )
+source( '/cvri/Rutils/enrichmentAnalysis.R' )
 ## Prefered options
 options( width = 120, warn = -1 )
 
@@ -100,7 +101,8 @@ allfpkmZscores <- function( geneSet )
         return ( fpkmRow )
     }
 
-    logger( 'Normalize FPKMs', level = logger.levels$STAGE )
+    logger( 'Normalize FPKMs', level = logger.levels$STAGE, append = ' ' )
+    logger( nrow(geneSet), level = logger.levels$GENE, append = '\n' )
 
     fpkms <- matrix( unlist( geneSet[,2:ncol(geneSet)] ), ncol = ncol(geneSet)-1 )
     geneSet$fpkmZ <- t( apply( fpkms, 1, getFPKM ) )
@@ -112,7 +114,7 @@ allfpkmZscores <- function( geneSet )
 #
 makeHeatmap <- function( geneSet, file = 'GOI_expression_heatmap.png',
     width = 2200, height = 2200, title = 'GOI Expression',
-    heatmapDirectory = HEATMAPS_DIR,
+    heatmapDirectory = HEATMAPS_DIR, byFoldChange = FALSE,
     cexRow = 2.0, cexCol = 5.0, Colv = FALSE, dendrogram = 'row',
     lhei = c(0.05,0.9), labRow = geneSet$gene,
     hclustF = function(d) hclust(d=d, method='ward.D2'), ... )
@@ -129,13 +131,21 @@ makeHeatmap <- function( geneSet, file = 'GOI_expression_heatmap.png',
 
     par( cex.main = 2.0 )
     # By FPKM
-    heatmap.2( matrix( unlist( geneSet$fpkmZ ), ncol = ncol(geneSet$fpkmZ) ),
-        main = title, scale = 'row', key = FALSE, lhei = lhei, lwid = c(0.15,0.85),
-        Colv = Colv, dendrogram = dendrogram, labRow = labRow,
-        labCol = names( geneSet[,c(2:(ncol(geneSet$fpkmZ)+1))] ),
-        col = greenred, na.color = 'grey', trace = 'none',
-        margin = c( 40, 15 ), cexRow = cexRow, cexCol = cexCol,
-        hclust = hclustF, ... )
+    if ( !byFoldChange && 'fpkmZ' %in% colnames( geneSet )  )
+        heatmap.2( as.matrix( geneSet$fpkmZ ),
+            main = title, key = FALSE, lhei = lhei, lwid = c(0.15,0.85),
+            Colv = Colv, dendrogram = dendrogram, labRow = labRow,
+            labCol = names( subset( geneSet, select=-c(gene,fpkmZ) ) ),
+            col = greenred, na.color = 'grey', trace = 'none',
+            margin = c( 40, 15 ), cexRow = cexRow, cexCol = cexCol,
+            hclust = hclustF, ... )
+    else
+        heatmap.2( as.matrix( subset( geneSet, select=-gene ) ),
+            main = title, scale = 'row', key = FALSE, lhei = lhei, lwid = c(0.15,0.85),
+            Colv = Colv, dendrogram = dendrogram, labRow = labRow,
+            col = greenred, na.color = 'grey', trace = 'none',
+            margin = c( 40, 15 ), cexRow = cexRow, cexCol = cexCol,
+            hclust = hclustF, ... )
     suppressMessages( graphics.off() )
 }
 
@@ -145,6 +155,7 @@ makeHeatmap <- function( geneSet, file = 'GOI_expression_heatmap.png',
 writeGOI <- function( geneData, withScore = FALSE, dir = 'goi', fileBody = 'GOI' )
 {
     file <- ffn( dir=dir, outputFile = fileBody, ext='.txt' )
+    file.create( file )
 
     logger( 'Write GOI to file', level = logger.levels$STAGE, append = ' ' )
     logger( nrow( geneData ), level = logger.levels$GENE, append = ' Genes being printed\n' )
@@ -188,7 +199,7 @@ massive <- function( geneData, cases = 2 )
     geneSet <- geneSet[order(geneSet$gene),]
 
     # The row bindings take place very separately, so the set needs to be aggregated
-    geneSet <- aggregate( geneSet[, 2:ncol( geneSet )],
+    geneSet <- aggregate( geneSet[, -1],
                     by = geneSet[, 'gene', drop = FALSE],
                     mean,  na.rm = TRUE, na.action = NULL )
 
@@ -369,51 +380,8 @@ runHOMER <- function()
     ## In bash where $1 is an organism
     # /cvri/bin/nohupWrapper.sh eaENRICH/time.txt eaENRICH/output.txt findMotifs.pl goi/goi_ENRICH.tsv $1 eaENRICH/ -depth high -p 2
     # /cvri/bin/nohupWrapper.sh eaDEPLET/time.txt eaDEPLET/output.txt findMotifs.pl goi/goi_DEPLET.tsv $1 eaDEPLET/ -depth high -p 2
-    # watchIt() { while :; do c; date; echo; ps -p `pgrep -f findMotifs.pl | head -n 1` -o etime="findMotifs.pl running for:"; echo; tail -n $1 */output.txt; echo; sleep 2; done; }
-    # watchIt 20
+    # watchIt findMotifs.pl echo 'tail -20 */output.txt'
     cat( '/cvri/bin/kickOffHOMER' )
-}
-
-##
-# Analyze the results of HOMER after it runs
-#
-analyzeEnrichment <- function(
-    analysis = c( 'eaENRICH/biological_process.txt',
-                    'eaDEPLET/biological_process.txt',
-                    'eaENRICH/kegg.txt',
-                    'eaDEPLET/kegg.txt' ),
-    n = 5 )
-{
-    logger( 'Analyze HOMER Enrichment Analysis Output ', level = logger.levels$STAGE )
-
-    ea <<- list()
-    for ( i in 1:length(analysis) )
-        ea[[analysis[i]]] <<- read.table( analysis[i], sep = '\t', header = TRUE, fill = TRUE )
-
-    # bp_enriched <<- read.table( 'eaENRICH/biological_process.txt', sep = '\t', header = TRUE, fill = TRUE )
-    # bp_depleted <<- read.table( 'eaDEPLET/biological_process.txt', sep = '\t', header = TRUE, fill = TRUE )
-    # kg_enriched <<- read.table( 'eaENRICH/kegg.txt', sep = '\t', header = TRUE, fill = TRUE )
-    # kg_depleted <<- read.table( 'eaDEPLET/kegg.txt', sep = '\t', header = TRUE, fill = TRUE )
-
-    for ( i in 1:length(ea) )
-    {
-        readName <- gsub( '.txt', '', gsub( '(/)', '-', names(ea)[i], perl = TRUE ) )
-
-        cond <- ea[[i]]
-        cond <- cond[cond$Target.Genes.in.Term > 0,]
-        cond <- cond[order(cond$logP),]
-        cond <- cond[!duplicated(cond[,2]),]
-
-        logger( prepend = ' ===>>> ', readName, fg = 13, append = ' <<<===\n-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --\n' )
-        print( cond[1:n,c(2,4,6)] )
-        cat( '\n' )
-
-        ea[[i]] <<- cond
-
-        write.Table( cond,
-            file = ffn( dir='enrichmentAnalysis', outputFile = readName ),
-            col.names = TRUE )
-    }
 }
 
 ##

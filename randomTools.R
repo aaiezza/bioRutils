@@ -1,13 +1,14 @@
 #!/usr/bin/Rscript
 
+options( width = 120, warn = -1 )
 # # # #
 # # Just some random R functions that are helpful # #
 
 # Override defaults of functions
-gsub <- function( pattern, replacement, x, ignore.case = FALSE, perl = TRUE, fixed = FALSE, useBytes = FALSE )
-{
-    return( gsub(pattern, replacement, x, ignore.case = ignore.case, perl = perl, fixed = fixed, useBytes = useBytes) );
-}
+# gsub <- function( pattern, replacement, x, ignore.case = FALSE, perl = TRUE, fixed = FALSE, useBytes = FALSE )
+# {
+#     return( gsub(pattern, replacement, x, ignore.case = ignore.case, perl = perl, fixed = fixed, useBytes = useBytes) );
+# }
 
 # Generate random nucleotide sequence
 randNucleotides <- function(
