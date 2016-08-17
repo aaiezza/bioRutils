@@ -8,7 +8,7 @@ HEATMAPS_DIR <- 'heatmaps'
 VOLCANO_WIDGET_DIR <- 'interactiveVolcanoPlots'
 
 ## Package Dependencies
-suppressMessages( library( xlsx ) )
+# suppressMessages( library( xlsx ) )
 suppressMessages( library( plotly ) )
 suppressMessages( library( plyr ) )
 suppressMessages( library( gplots ) )
@@ -19,6 +19,7 @@ source( '/cvri/Rutils/randomTools.R' )
 source( '/cvri/Rutils/plotUtils.R' )
 source( '/cvri/Rutils/geneSetUtils.R' )
 source( '/cvri/Rutils/enrichmentAnalysis.R' )
+# source( '/cvri/Rutils/xlsxWriter.R' )
 ## Prefered options
 options( width = 120, warn = -1 )
 
@@ -172,7 +173,7 @@ writeGOI <- function( geneData, withScore = FALSE, dir = 'goi', fileBody = 'GOI'
     } else
     {
         ## if here, we are assuming that the data given was a matrix of fpkms
-        write( conditions, ncolumns = length( conditions ), file = file )
+        write( theConditions, ncolumns = length( theConditions ), file = file )
         write.Table( geneData[,-length( names( geneData ) )], file = file, append = TRUE, col.names = FALSE, verbose = FALSE )
     }
 }
@@ -186,17 +187,17 @@ massive <- function( geneData, cases = 2 )
     # This here retreives all of the expression levels
     #  for each gene for each condition regardless of which sample number it is
     #  in the condition comparison
-    for ( c in 1:length(conditions) )
+    for ( c in 1:length(theConditions) )
     {
-        cond <- geneData[geneData$sample_1 == conditions[c],FAV_COLS]
-        geneSet <- rbind.fill( geneSet, setNames( cond[,c('gene', 'value_1')], c( 'gene', conditions[c] ) ) )
+        cond <- geneData[geneData$sample_1 == theConditions[c],FAV_COLS]
+        geneSet <- rbind.fill( geneSet, setNames( cond[,c('gene', 'value_1')], c( 'gene', theConditions[c] ) ) )
 
-        cond <- geneData[geneData$sample_2 == conditions[c],FAV_COLS]
-        geneSet <- rbind.fill( geneSet, setNames( cond[,c('gene', 'value_2')], c( 'gene', conditions[c] ) ) )
+        cond <- geneData[geneData$sample_2 == theConditions[c],FAV_COLS]
+        geneSet <- rbind.fill( geneSet, setNames( cond[,c('gene', 'value_2')], c( 'gene', theConditions[c] ) ) )
     }
 
-    # Ordering the gense serves no functional purpose, but makes visualizing easier if debugging is needed
-    geneSet <- geneSet[order(geneSet$gene),]
+    # Ordering the genes serves no functional purpose, but makes visualizing easier if debugging is needed
+    # geneSet <- geneSet[order(geneSet$gene),]
 
     # The row bindings take place very separately, so the set needs to be aggregated
     geneSet <- aggregate( geneSet[, -1],
@@ -222,7 +223,7 @@ massive <- function( geneData, cases = 2 )
         'Genes missing expression in at least 1 condition',
             logger( nrow( geneSet.naFPKM ), level = logger.levels$GENE, print = FALSE ) ), append = '\n' )
 
-    if ( cases >= length( conditions ) )
+    if ( cases >= length( theConditions ) )
     {
         # TODO
         ## geneSet.naFPKM cannot be calculated in this case
@@ -253,8 +254,8 @@ getSDEGeneSet <- function( gene_set = geneSet$all,
         significant = 'yes', alpha = altAlpha,
         log2FoldChangeCutoff = l2fccU, exprRegulation = 'UP',
         geneSetName = 'Enriched Genes' )
-    enriched.data <<- enriched.data[enriched.data$sample_1 %in% conditions,]
-    enriched.data <<- enriched.data[enriched.data$sample_2 %in% conditions,]
+    enriched.data <<- enriched.data[enriched.data$sample_1 %in% theConditions,]
+    enriched.data <<- enriched.data[enriched.data$sample_2 %in% theConditions,]
     enriched <<- gene_set[gene_set$gene %in% enriched.data$gene,]
     logger( '  ', nrow(enriched), append = ' genes present across conditions\n', level = logger.levels$GENE )
 
@@ -263,8 +264,8 @@ getSDEGeneSet <- function( gene_set = geneSet$all,
         significant = 'yes', alpha = altAlpha,
         log2FoldChangeCutoff = l2fccD, exprRegulation = 'DOWN',
         geneSetName = 'Depleted Genes' )
-    depleted.data <<- depleted.data[depleted.data$sample_1 %in% conditions,]
-    depleted.data <<- depleted.data[depleted.data$sample_2 %in% conditions,]
+    depleted.data <<- depleted.data[depleted.data$sample_1 %in% theConditions,]
+    depleted.data <<- depleted.data[depleted.data$sample_2 %in% theConditions,]
     depleted <<- gene_set[gene_set$gene %in% depleted.data$gene,]
     logger( '  ', nrow(depleted), append = ' genes present across conditions\n', level = logger.levels$GENE )
 }
@@ -272,23 +273,23 @@ getSDEGeneSet <- function( gene_set = geneSet$all,
 ##
 # Parse Conditions
 #
-parseCondtions <- function( ignoreConditions = c() )
+parseConditions <- function( ignoreConditions = c() )
 {
     conditionComparisons <<- unique( geneData[,FAV_COLS][,2:3] )
     allConditions <<- unique(as.vector(unlist(conditionComparisons)))
 
     igCond <- paste( '^(', paste( ignoreConditions, collapse='|' ), ')$', sep='' )
-    conditions <<- allConditions[grep( igCond, allConditions, invert = TRUE )]
-    conditionsSet <<- t( combn( conditions, 2 ) )
+    theConditions <<- allConditions[grep( igCond, allConditions, invert = TRUE )]
+    conditionsSet <<- t( combn( theConditions, 2 ) )
 
     logger( 'Identifying comparisons', level = logger.levels$STAGE )
-    for ( c in 1:length(conditions) )
-        cat( ifelse( c == 1, '', ',' ), logger( conditions[c], level = logger.levels$CONDITION, print = FALSE ) )
+    for ( c in 1:length(theConditions) )
+        cat( ifelse( c == 1, '', ',' ), logger( theConditions[c], level = logger.levels$CONDITION, print = FALSE ) )
 
     if ( length(allConditions[grep( igCond, allConditions )]) > 0 )
-        logger( prepend = ' ~ ignoring',
+        logger( prepend = ' ~ ignoring ',
             paste( allConditions[grep( igCond, allConditions )], collapse = ', '),
-            level = logger.levels$IGNORE_COND )
+            level = logger.levels$IGNORED_COND )
 
     cat( '\n' )
 }
@@ -302,7 +303,7 @@ prerun <- function( uniformExpression = FALSE,
 {
     importGD()
 
-    parseCondtions( ignoreConditions )
+    parseConditions( ignoreConditions )
 
     geneSet <<- massive( geneData )
 
@@ -382,51 +383,4 @@ runHOMER <- function()
     # /cvri/bin/nohupWrapper.sh eaDEPLET/time.txt eaDEPLET/output.txt findMotifs.pl goi/goi_DEPLET.tsv $1 eaDEPLET/ -depth high -p 2
     # watchIt findMotifs.pl echo 'tail -20 */output.txt'
     cat( '/cvri/bin/kickOffHOMER' )
-}
-
-##
-# Write date to Excel file
-#
-createExcelFile <- function( geneData, file = 'goi.xlsx', tableName = 'Gene Expression Set' )
-{
-    # Java imports
-    IndexedColors  <- 'org.apache.poi.ss.usermodel.IndexedColors'
-    # AreaReference  <- 'org.apache.poi.ss.util.AreaReference'
-    # CellReference  <- 'org.apache.poi.ss.util.CellReference'
-
-    wb <- createWorkbook( type = 'xlsx' )
-
-    TABLE_ROWNAMES_STYLE <- CellStyle( wb,
-            font = Font( wb, name = 'Verdana', heightInPoints = 12 ),
-            alignment = Alignment( wrapText = TRUE, horizontal = "ALIGN_CENTER",
-                vertical = "VERTICAL_CENTER" ) )
-    TABLE_COLNAMES_STYLE <- CellStyle( wb,
-            font = Font( wb, name = 'Calibri', isBold = TRUE ),
-            alignment = Alignment( wrapText = TRUE, horizontal = "ALIGN_CENTER",
-                vertical = "VERTICAL_CENTER" ) )
-    TABLE_CELL_STYLE <- CellStyle( wb,
-            font = Font( wb, name = 'Consolas', heightInPoints = 12  ),
-            alignment = Alignment( vertical = "VERTICAL_CENTER" ) )
-    TABLE_CELL_STYLES <- rep( list( TABLE_CELL_STYLE ), ncol( geneData ) )
-    names( TABLE_CELL_STYLES ) <- 1:ncol( geneData )
-
-    sheet <- createSheet( wb, sheetName = 'All GOI' )
-    ##  Nifty, but we can use something better
-    #.jcall(sheet, 'V','setTabColor', as.integer(12) )
-    sheet$setTabColor(J(IndexedColors)$GREEN$index)
-
-    # Lay the data down
-    addDataFrame( geneData, sheet = sheet, row.names = FALSE,
-        startRow = 1, startColumn = 1,
-        colnamesStyle = TABLE_COLNAMES_STYLE,
-        rownamesStyle = TABLE_ROWNAMES_STYLE,
-        colStyle = TABLE_CELL_STYLES )
-
-    gdCols <- !names( geneData ) %in% c('log2(fold_change)', 'test_stat')
-    for( i in 1:length( gdCols ) )
-        if( gdCols[i] ) autoSizeColumn( sheet, i )
-
-    addAutoFilter( sheet, paste( 'A1:', LETTERS[ncol(geneData)], nrow(geneData), sep='' ) )
-
-    saveWorkbook( wb, file )
 }

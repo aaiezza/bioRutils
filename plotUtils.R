@@ -3,6 +3,8 @@
 suppressMessages( library( calibrate ) )
 suppressMessages( library( ggplot2 ) )
 suppressMessages( library( ggrepel ) )
+suppressMessages( library( ggdendro ) )
+suppressMessages( library( dendextend ) )
 suppressMessages( require( htmlwidgets ) )
 suppressMessages( require( gridExtra ) )
 
@@ -151,4 +153,33 @@ produceVolcanoPlot <- function(
     cat( '\n' )
 
     return( plot )
+}
+
+produceDendrogram <- function(
+    sampleCluster,
+    fileName = ffn( prepend = 'dendrogram', ext = '.png' ),
+    plot_labs = NULL, k_clusters = 1, ymin = -0.15 )
+{
+    png( fileName, width = 1080, height = 850 )
+
+    dend <- sampleCluster %>% as.dendrogram %>%
+        set( 'branches_k_color', k = k_clusters ) %>%
+        set( 'labels_cex', 1.2 )
+
+    plot <- as.ggdend( dend )
+
+    plot <- ggplot( plot ) +
+        theme_bw( base_size = 20 ) +
+        theme(
+            plot.margin = unit(c(2,2,2,2), 'lines'),
+            plot.title = element_text( size=24, vjust=0.5, margin=margin(10,0,25,0) ),
+            axis.title.y = element_text( vjust=0.5, margin=margin(0,15,0,5) ),
+            axis.title.x = element_text( vjust=0.5, margin=margin(15,0,5,0) ),
+            axis.text.x = element_blank(),
+            axis.ticks.x = element_blank() ) +
+        ylim( ymin, max( get_branches_heights( dend ) ) ) +
+        plot_labs
+
+    print( plot )
+    suppressMessages( graphics.off() )
 }

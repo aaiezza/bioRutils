@@ -20,7 +20,7 @@ randNucleotides <- function(
             sample( x = nucleotides, size = n, replace = TRUE, prob = weights ) )
 
     # Report counts
-    if ( print ) print( paste( sequence, collapse=", " ) )
+    if ( print ) print( paste0( sequence, collapse='' ) )
 
     seqFreq <- table( sequence )
     if ( counts ) print( seqFreq )
@@ -73,7 +73,10 @@ write.Table <- function(
     if ( verbose )
     {
         logger( 'Write data to file', level = logger.levels$STAGE, append = ' ' )
-        logger( '[ ', nrow( x ), ', ', ncol( x ), ' ]', level = logger.levels$NORMAL, sep = '' )
+        if ( typeof(x) == 'character' )
+            logger( '[ ', length( x ), ' ]', level = logger.levels$NORMAL, sep = '' )
+        else
+            logger( '[ ', nrow( x ), ', ', ncol( x ), ' ]', level = logger.levels$NORMAL, sep = '' )
         logger( file, level = logger.levels$FILE_PATH, append = '\n' )
     }
 
@@ -114,13 +117,13 @@ logger <- function( ..., level = logger.levels$NORMAL, print = TRUE,
 {
     message <- paste( ... )
 
-    if ( level == logger.levels$FILE_PATH )
+    if ( !is.null( level ) && level == logger.levels$FILE_PATH )
         message <- normalizePath( message )
 
     message <- xtermStyle::style( formattedPrepend, message, formattedAppend,
             fg = fg, bg = bg, sep = '' )
 
-    output <- paste( prepend, message, append, sep = '' )
+    output <- paste0( prepend, message, append )
 
     if ( print )
         cat( output )

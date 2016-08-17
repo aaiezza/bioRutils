@@ -106,7 +106,7 @@ analyzeDAVIDEnrichment <- function(
 # Analyze Enrichment Analysis from GeneTrail 2
 #
 analyzeGeneTrail2Enrichment <- function(
-    dir = 'goi', toFiles = FALSE, m = 10 )
+    dir = 'enrichment', toFiles = FALSE, m = 10 )
 {
     # TODO, finish this class and use IT instead of
     #  relying on the user to run the analysis manually on the website
@@ -122,11 +122,11 @@ analyzeGeneTrail2Enrichment <- function(
     GTEnrichmentAnalysis <- list()
 
     orderUp <- function( table )
-        return( table[order( table$P.value ),!( names(table) %in% c( 'Reference', 'Regulation_direction' ) )] )
+        return( table[order( table$P_value ), !( names(table) %in% c( 'Reference' ) )] )
 
     if ( toFiles )
-        logger( 'GeneTrail2 Enrichment Analysis - \n', logger( dirname(dir), level = logger.levels$FILE_PATH, print = FALSE, formattedPrepend = '' ),
-                level = logger.levels$STAGE, append  = ':\n ' )
+        logger( 'GeneTrail2 Enrichment Analysis - \n', logger( dir, level = logger.levels$FILE_PATH, print = FALSE, formattedPrepend = '' ),
+                level = logger.levels$STAGE, append  = ':\n' )
 
     # After downloading and unzipping into the goi folders from GeneTrail2
     for( ea in names( ANALYSIS ) )
@@ -134,14 +134,15 @@ analyzeGeneTrail2Enrichment <- function(
         eaFile <- normalizePath( paste( dir, ANALYSIS[[ea]], sep = '/') )
         if( !file.exists( eaFile ) ) next
 
-        GTEnrichmentAnalysis[[ea]] <-
-            read.delim( eaFile )
+        GTEnrichmentAnalysis[[ea]] <- read.delim( eaFile )
+
+        names( GTEnrichmentAnalysis[[ea]] ) <- str_replace( names( GTEnrichmentAnalysis[[ea]] ), '\\.', '_' )
 
         GTEnrichmentAnalysis[[ea]] <- orderUp( GTEnrichmentAnalysis[[ea]] )
 
         if ( toFiles )
         {
-            logger( basename( ffn( dir = dir, outputFile = ea ) ), level = logger.levels$FILE_PATH, append = ' ' )
+            logger( ' ', basename( ffn( dir = dir, outputFile = ea ) ), level = logger.levels$FILE_PATH, append = ' ' )
             write.Table( GTEnrichmentAnalysis[[ea]], ffn( dir = dir, outputFile = ea ), verbose = FALSE )
         }
     }
