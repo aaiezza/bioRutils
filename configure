@@ -1,0 +1,6 @@
+#!/bin/bash
+
+LOCATION=$(dirname `pwd` | sed -E 's/\//\\\//g')
+[[ -n $1 ]] && LOCATION=$1
+
+sed -i 's/\/cvri\//'$LOCATION'\/bio/g' *.R
