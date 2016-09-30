@@ -3,6 +3,9 @@
 suppressMessages( require( stringr ) )
 suppressMessages( require( xlsx ) )
 
+options( java.parameters = "-Xmx32g" )
+.joptions( java.parameters = "-Xmx32g" )
+
 .jinit()
 .jaddClassPath( dir( '~/.local/java-libs', full.names = TRUE ) )
 # Can prove it with .jclassPath()

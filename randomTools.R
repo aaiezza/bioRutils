@@ -129,3 +129,11 @@ logger <- function( ..., level = logger.levels$NORMAL, print = TRUE,
         cat( output )
     else return( output )
 }
+
+# Print logger levels
+print.logger.levels <- function()
+{
+	null <- lapply( logger.levels, function( l ) {
+		logger( l, '\n ---\n', logger('Testing!', level = l, print = FALSE ), '\n ---\n' )
+	} )
+}

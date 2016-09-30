@@ -118,10 +118,14 @@ makeHeatmap <- function( geneSet, file = 'GOI_expression_heatmap.png',
     heatmapDirectory = HEATMAPS_DIR, byFoldChange = FALSE,
     cexRow = 2.0, cexCol = 5.0, Colv = FALSE, dendrogram = 'row',
     lhei = c(0.05,0.9), labRow = geneSet$gene,
+    labCol = names( subset( geneSet, select=-c(gene,fpkmZ) ) ),
     hclustF = function(d) hclust(d=d, method='ward.D2'), ... )
 {
     if ( ncol( conditionsSet ) <= 1 || nrow( geneSet ) <= 1 )
         return()
+
+    if( !dir.exists( heatmapDirectory ) )
+        dir.create( heatmapDirectory, recursive = TRUE )
 
     logger( 'Creating Heatmap', level = logger.levels$STAGE, append = ' ' )
     logger( nrow(geneSet), level = logger.levels$GENE, append = ' Genes being Mapped\n' )
@@ -136,7 +140,7 @@ makeHeatmap <- function( geneSet, file = 'GOI_expression_heatmap.png',
         heatmap.2( as.matrix( geneSet$fpkmZ ),
             main = title, key = FALSE, lhei = lhei, lwid = c(0.15,0.85),
             Colv = Colv, dendrogram = dendrogram, labRow = labRow,
-            labCol = names( subset( geneSet, select=-c(gene,fpkmZ) ) ),
+            labCol = labCol,
             col = greenred, na.color = 'grey', trace = 'none',
             margin = c( 40, 15 ), cexRow = cexRow, cexCol = cexCol,
             hclust = hclustF, ... )
@@ -180,7 +184,7 @@ writeGOI <- function( geneData, withScore = FALSE, dir = 'goi', fileBody = 'GOI'
 
 massive <- function( geneData, cases = 2 )
 {
-    logger( 'Aggregrate data to Gene Set', level = logger.levels$STAGE )
+    logger( 'Aggregate data to Gene Set', level = logger.levels$STAGE )
 
     # Make massive geneSet
     geneSet <- data.frame()
@@ -343,33 +347,6 @@ volcanos <- function( toPdf = FALSE, myOwnPdf = FALSE,
     if ( toPdf || myOwnPdf ) suppressMessages( graphics.off() )
 
     return( plots )
-
-    # Heatmap
-
-    # makeHeatmap( enriched, file = 'GOI_expression_heatmap_ENRICH.png',
-    #   title = 'GOI Significantly Enriched' )
-    # makeHeatmap( depleted, file = 'GOI_expression_heatmap_DEPLET.png',
-    #   title = 'GOI Significantly Depleted' )
-    # makeHeatmap( sdeGenes, colsep = colsep, title = 'SDE Genes' )
-
-    # dataPeek( geneData, len = 20000, cap = 50, file = TRUE )
-
-    # library(GOexpress)
-    # BP.5 <- subset_scores( result = )
-
-    ## For now this alternative is handled by HOMER
-    # writeGOI( enriched.data, fileBody = 'goi_ENRICH' )
-    # writeGOI( depleted.data, fileBody = 'goi_DEPLET' )
-
-
-    ## In bash
-    # /cvri/bin/nohupWrapper.sh eaENRICH/time.txt eaENRICH/output.txt findMotifs.pl goi/goi_ENRICH.tsv $1 eaENRICH/ -depth high -p 2
-    # /cvri/bin/nohupWrapper.sh eaDEPLET/time.txt eaDEPLET/output.txt findMotifs.pl goi/goi_DEPLET.tsv $1 eaDEPLET/ -depth high -p 2
-    # watchIt() { while :; do c; date; echo; ps -p `pgrep -f findMotifs.pl | head -n 1` -o etime="findMotifs.pl running for:"; echo; tail -n $1 */output.txt; echo; sleep 2; done; }
-    # watchIt 20
-    # cat( '/cvri/bin/kickOffHOMER' )
-
-    # createExcelFile( geneData )
 }
 
 ##
@@ -378,9 +355,6 @@ volcanos <- function( toPdf = FALSE, myOwnPdf = FALSE,
 #
 runHOMER <- function()
 {
-    ## In bash where $1 is an organism
-    # /cvri/bin/nohupWrapper.sh eaENRICH/time.txt eaENRICH/output.txt findMotifs.pl goi/goi_ENRICH.tsv $1 eaENRICH/ -depth high -p 2
-    # /cvri/bin/nohupWrapper.sh eaDEPLET/time.txt eaDEPLET/output.txt findMotifs.pl goi/goi_DEPLET.tsv $1 eaDEPLET/ -depth high -p 2
     # watchIt findMotifs.pl echo 'tail -20 */output.txt'
     cat( '/cvri/bin/kickOffHOMER' )
 }

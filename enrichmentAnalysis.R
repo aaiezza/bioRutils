@@ -124,14 +124,69 @@ analyzeGeneTrail2Enrichment <- function(
     orderUp <- function( table )
         return( table[order( table$P_value ), !( names(table) %in% c( 'Reference' ) )] )
 
+    widenEnAn <- function ( gteaEnAn )
+    {
+        EnAn <- data.frame( row.names = c(), gteaEnAn )
+
+        EnAnMod <- data.frame( row.names=c(), 'Term' = character(),
+               'P_value' = double(), 'Gene' = character(),
+               'AllTermCount' = integer(),
+               'SigTermCount' = integer(),
+               'GeneCount' = integer(),
+               'Expected_Score' = integer(),
+               'Regulation_direction' = character() )
+        apply( EnAn, 1, function(w) {
+            if( is.na( w[6] ) )
+                return()
+            genes <- unlist( strsplit( w[6], ',', fixed = TRUE ) )
+
+            wMod <- data.frame( row.names=c(), 'Term' = rep( w[1], length( genes ) ),
+                'P_value' = as.double( rep( w[5], length( genes ) ) ), 'Gene' = genes,
+                'AllTermCount' = as.integer( rep( 0, length( genes ) ) ),
+                'SigTermCount' = as.integer( rep( 0, length( genes ) ) ),
+                'GeneCount' = as.integer( rep( length( genes ), length( genes ) ) ),
+                'Expected_Score' = as.double( rep( w[4], length( genes ) ) ),
+                'Regulation_direction' = rep( ifelse(as.integer(w[7])==1,'ENRICHED','DEPLETED'), length( genes ) ) )
+            EnAnMod <<- rbind( EnAnMod, wMod )
+            return()
+        } )
+
+        if( nrow( EnAnMod ) > 0 )
+        {
+            cat( ' ♫' )
+            apply( count( EnAnMod$Gene ), 1, function( pc )
+            {
+                if( length(pc) > 0 )
+                    EnAnMod[EnAnMod$Gene == as.character( pc[1] ),]$AllTermCount <<-
+                        ifelse( !is.null( pc[2] ), as.numeric( pc[2] ), 0 )
+                return()
+            } )
+        }
+        if( nrow( EnAnMod[EnAnMod$P_value < 5e-2,] ) > 0 )
+        {
+            cat( ' §' )
+            apply( count( EnAnMod[EnAnMod$P_value < 5e-2,]$Gene ), 1, function( pc )
+            {
+                if( length(pc) > 0 )
+                    EnAnMod[EnAnMod$Gene == as.character( pc[1] ),]$SigTermCount <<-
+                        ifelse( !is.null( pc[2] ), as.numeric( pc[2] ), 0 )
+                return()
+            } )
+            EnAnMod <- EnAnMod[order(-EnAnMod$SigTermCount),]
+        }
+        return( EnAnMod )
+    }
+
     if ( toFiles )
-        logger( 'GeneTrail2 Enrichment Analysis - \n', logger( dir, level = logger.levels$FILE_PATH, print = FALSE, formattedPrepend = '' ),
-                level = logger.levels$STAGE, append  = ':\n' )
+        logger( 'GeneTrail2 Enrichment Analysis - \n',
+            logger( dir, level = logger.levels$FILE_PATH,
+                    print = FALSE, formattedPrepend = '' ),
+            level = logger.levels$STAGE, append  = ':\n' )
 
     # After downloading and unzipping into the goi folders from GeneTrail2
     for( ea in names( ANALYSIS ) )
     {
-        eaFile <- normalizePath( paste( dir, ANALYSIS[[ea]], sep = '/') )
+        eaFile <- normalizePath( paste( dir, ANALYSIS[[ea]], sep = '/' ) )
         if( !file.exists( eaFile ) ) next
 
         GTEnrichmentAnalysis[[ea]] <- read.delim( eaFile )
@@ -139,6 +194,8 @@ analyzeGeneTrail2Enrichment <- function(
         names( GTEnrichmentAnalysis[[ea]] ) <- str_replace( names( GTEnrichmentAnalysis[[ea]] ), '\\.', '_' )
 
         GTEnrichmentAnalysis[[ea]] <- orderUp( GTEnrichmentAnalysis[[ea]] )
+
+        GTEnrichmentAnalysis[[ea]] <- widenEnAn( GTEnrichmentAnalysis[[ea]] )
 
         if ( toFiles )
         {
@@ -298,3 +355,4 @@ GeneTrail2Client <- R6Class(
 # setup job
 # start job
 # once job is done, download the resources,
+
