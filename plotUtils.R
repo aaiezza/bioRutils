@@ -7,11 +7,12 @@ suppressMessages( library( ggdendro ) )
 suppressMessages( library( dendextend ) )
 suppressMessages( require( htmlwidgets ) )
 suppressMessages( require( gridExtra ) )
+suppressMessages( require( plotly ) )
 
 Sys.setenv("plotly_username" = "aaiezza")
 Sys.setenv("plotly_api_key" = "7igknczkw2")
 
-suppressMessages( source( '/cvri/Rutils/randomTools.R' ) )
+suppressMessages( source( '~/bioRutils/randomTools.R' ) )
 
 # # # #
 # # Shortcut for not needing to think to hard on a plot file name
@@ -51,7 +52,7 @@ produceVolcanoPlot <- function(
     toWidget = FALSE, volcanoWidgetDir = 'interactiveVolcanoPlots', ...
 )
 {
-    conds <- strsplit( title, ' vs ' )[[1]]
+    conds <- strsplit( as.character( title ), ' vs ' )[[1]]
     if ( length( conds ) == 2 )
         logger( prepend = '  ~',
             sprintf( '%20s vs %-20s', conds[1], conds[2] ),
@@ -87,6 +88,9 @@ produceVolcanoPlot <- function(
       ####
         geom_point( aes( fill = class ), show.legend = showLegend,
             color = 'black', shape = 21, size = 5, stroke = 1.3 ) +
+      ####
+      # TODO: when certain classes in these criteria end up empty
+      #  the color values are offset!
       ####
         scale_fill_manual( name = NULL,
             breaks = c(

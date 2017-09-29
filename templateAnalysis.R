@@ -15,11 +15,11 @@ suppressMessages( library( gplots ) )
 suppressMessages( library( data.table ) )
 
 ## Other Generalized Scripts
-source( '/cvri/Rutils/randomTools.R' )
-source( '/cvri/Rutils/plotUtils.R' )
-source( '/cvri/Rutils/geneSetUtils.R' )
-source( '/cvri/Rutils/enrichmentAnalysis.R' )
-# source( '/cvri/Rutils/xlsxWriter.R' )
+source( '~/bioRutils/randomTools.R' )
+source( '~/bioRutils/plotUtils.R' )
+source( '~/bioRutils/geneSetUtils.R' )
+source( '~/bioRutils/enrichmentAnalysis.R' )
+# source( '~/bioRutils/xlsxWriter.R' )
 ## Prefered options
 options( width = 120, warn = -1 )
 
@@ -124,9 +124,6 @@ makeHeatmap <- function( geneSet, file = 'GOI_expression_heatmap.png',
     if ( ncol( conditionsSet ) <= 1 || nrow( geneSet ) <= 1 )
         return()
 
-    if( !dir.exists( heatmapDirectory ) )
-        dir.create( heatmapDirectory, recursive = TRUE )
-
     logger( 'Creating Heatmap', level = logger.levels$STAGE, append = ' ' )
     logger( nrow(geneSet), level = logger.levels$GENE, append = ' Genes being Mapped\n' )
     logger( file, level = logger.levels$FILE_PATH, append = '\n' )
@@ -184,7 +181,7 @@ writeGOI <- function( geneData, withScore = FALSE, dir = 'goi', fileBody = 'GOI'
 
 massive <- function( geneData, cases = 2 )
 {
-    logger( 'Aggregate data to Gene Set', level = logger.levels$STAGE )
+    logger( 'Aggregrate data to Gene Set', level = logger.levels$STAGE )
 
     # Make massive geneSet
     geneSet <- data.frame()
@@ -347,6 +344,33 @@ volcanos <- function( toPdf = FALSE, myOwnPdf = FALSE,
     if ( toPdf || myOwnPdf ) suppressMessages( graphics.off() )
 
     return( plots )
+
+    # Heatmap
+
+    # makeHeatmap( enriched, file = 'GOI_expression_heatmap_ENRICH.png',
+    #   title = 'GOI Significantly Enriched' )
+    # makeHeatmap( depleted, file = 'GOI_expression_heatmap_DEPLET.png',
+    #   title = 'GOI Significantly Depleted' )
+    # makeHeatmap( sdeGenes, colsep = colsep, title = 'SDE Genes' )
+
+    # dataPeek( geneData, len = 20000, cap = 50, file = TRUE )
+
+    # library(GOexpress)
+    # BP.5 <- subset_scores( result = )
+
+    ## For now this alternative is handled by HOMER
+    # writeGOI( enriched.data, fileBody = 'goi_ENRICH' )
+    # writeGOI( depleted.data, fileBody = 'goi_DEPLET' )
+
+
+    ## In bash
+    # ~/scratch/bin/nohupWrapper.sh eaENRICH/time.txt eaENRICH/output.txt findMotifs.pl goi/goi_ENRICH.tsv $1 eaENRICH/ -depth high -p 2
+    # ~/scratch/bin/nohupWrapper.sh eaDEPLET/time.txt eaDEPLET/output.txt findMotifs.pl goi/goi_DEPLET.tsv $1 eaDEPLET/ -depth high -p 2
+    # watchIt() { while :; do c; date; echo; ps -p `pgrep -f findMotifs.pl | head -n 1` -o etime="findMotifs.pl running for:"; echo; tail -n $1 */output.txt; echo; sleep 2; done; }
+    # watchIt 20
+    # cat( '~/scratch/bin/kickOffHOMER' )
+
+    # createExcelFile( geneData )
 }
 
 ##
@@ -355,6 +379,9 @@ volcanos <- function( toPdf = FALSE, myOwnPdf = FALSE,
 #
 runHOMER <- function()
 {
+    ## In bash where $1 is an organism
+    # ~/scratch/bin/nohupWrapper.sh eaENRICH/time.txt eaENRICH/output.txt findMotifs.pl goi/goi_ENRICH.tsv $1 eaENRICH/ -depth high -p 2
+    # ~/scratch/bin/nohupWrapper.sh eaDEPLET/time.txt eaDEPLET/output.txt findMotifs.pl goi/goi_DEPLET.tsv $1 eaDEPLET/ -depth high -p 2
     # watchIt findMotifs.pl echo 'tail -20 */output.txt'
-    cat( '/cvri/bin/kickOffHOMER' )
+    cat( '~/scratch/bin/kickOffHOMER' )
 }

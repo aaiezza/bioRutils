@@ -8,7 +8,7 @@ suppressMessages( library( data.table ) )
 getSPD <- function( species = c() )
 {
     cat( xtermStyle::style( paste( '## Importing Secreted Genes ' ), bg = 'dark grey' ), '\n' )
-    spd <- fread( '/cvri/data/secreted_proteins_database/spd.name.nr90.species',
+    spd <- fread( '~/scratch/data/secreted_proteins_database/spd.name.nr90.species',
             header = TRUE, sep = '\t', data.table = FALSE )
 
     if ( length(species) <= 0 )

@@ -1,6 +1,6 @@
 #!/usr/bin/Rscript
 
-suppressMessages( source( '/cvri/Rutils/randomTools.R' ) )
+suppressMessages( source( '~/bioRutils/randomTools.R' ) )
 
 ##
 # Analyze the results of HOMER after it runs
@@ -355,4 +355,3 @@ GeneTrail2Client <- R6Class(
 # setup job
 # start job
 # once job is done, download the resources,
-

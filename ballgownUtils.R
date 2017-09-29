@@ -3,9 +3,9 @@
 # # # #
 # # Just some functions to use with Ballgown # #
 
-suppressMessages( source( '/cvri/Rutils/randomTools.R' ) )
+suppressMessages( source( '~/bioRutils/randomTools.R' ) )
 suppressMessages( library( ballgown ) )
-# suppressMessages( library( RSkittleBrewer ) )
+suppressMessages( library( RSkittleBrewer ) )
 suppressMessages( library( genefilter ) )
 suppressMessages( library( dplyr ) )
 suppressMessages( library( devtools ) )
@@ -13,7 +13,6 @@ suppressMessages( library( devtools ) )
 getBallgownData <- function(
     phenoDataFile,
     coVariate = NULL, adjustVars = c( 'population' ),
-    sample_pattern = '\\d[ABC]',
     alpha = 5e-2 )
 {
     # Retrieve phenotype data file
@@ -25,7 +24,7 @@ getBallgownData <- function(
         coVariate <- names( pheno_data )[2]
     }
 
-    bg <<- ballgown( dataDir = 'ballgown', samplePattern = sample_pattern, pData = pheno_data )
+    bg <<- ballgown( dataDir = 'ballgown', samplePattern = '\\d[ABC]', pData = pheno_data )
 
     # Filter
     bg_filt <<- subset( bg, 'rowVars(texpr(bg)) >1', genomesubset = TRUE )
@@ -45,11 +44,11 @@ getBallgownData <- function(
         geneNames = ballgown::geneNames( bg_filt ),
         geneIDs   = ballgown::geneIDs( bg_filt ), results_transcripts )
 
-    results_transcripts <<- arrange( results_transcripts, qval )
-    results_genes <<- arrange( results_genes, qval )
+    results_transcripts <<- arrange( results_transcripts, pval )
+    results_genes <<- arrange( results_genes, pval )
 
-    rT_filt <<- subset( results_transcripts, results_transcripts$pval < alpha )
-    rG_filt <<- subset( results_genes, results_genes$pval < alpha )
+    rT_filt <<- subset( results_transcripts, results_transcripts$qval < alpha )
+    rG_filt <<- subset( results_genes, results_genes$qval < alpha )
 
     rT_filt <<- rT_filt[grepl('[^\\.]', rT_filt$geneNames, perl = TRUE),]
 }
@@ -61,3 +60,4 @@ writeBGgenes <- function( dir = 'ballgownOutput' )
     write.Table( results_transcripts, paste0( dir, '/transcript_results.txt' ) )
     write.Table( results_genes, paste0( dir, '/gene_results.txt' ) )
 }
+

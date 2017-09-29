@@ -1,6 +1,6 @@
 #!/usr/bin/Rscript
 
-suppressMessages( source( '/cvri/Rutils/randomTools.R' ) )
+suppressMessages( source( '~/Rutils/randomTools.R' ) )
 
 # # # #
 # # Gene set retreival, Filtering and Selection # #
@@ -43,12 +43,14 @@ narrowDownGenes <- function(
     ### TODO: Should maybe be altered in the future
     ####  to be able to filter both above and below a value.
     ## Filter by value_1
-    sigGenes <- sigGenes[sigGenes$value_1 > value1,]
+    if( 'value_1' %in% colnames( sigGenes ) )
+        sigGenes <- sigGenes[sigGenes$value_1 > value1,]
 
     ### TODO: Should maybe be altered in the future
     ####  to be able to filter both above and below a value.
     ## Filter by value_2
-    sigGenes <- sigGenes[sigGenes$value_2 > value2,]
+    if( 'value_2' %in% colnames( sigGenes ) )
+        sigGenes <- sigGenes[sigGenes$value_2 > value2,]
 
     ## Filter genes with a given regular expression
     if( !missing( geneFilter ) )
